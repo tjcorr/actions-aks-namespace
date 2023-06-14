@@ -1,0 +1,75 @@
+name: Action to AKS (AAD RBAC)
+
+on: 
+  workflow_dispatch:
+  
+permissions:
+  id-token: write
+  contents: read  
+  
+jobs:
+  nsa:
+    runs-on: ubuntu-latest
+    environment: namespace-a
+    steps:
+    - name: Az CLI login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Set up kubelogin for non-interactive login
+      uses: azure/use-kubelogin@v1    
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: github-aks
+        cluster-name: aks-oidc-demo
+        use-kubelogin: true
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      
+    - name: List namespace a pods
+      run: kubectl get pods -n namespace-a
+      
+    - name: List namespace b pods
+      run: kubectl get pods -n namespace-b
+      continue-on-error: true
+      
+  nsb:
+    runs-on: ubuntu-latest
+    environment: namespace-b
+    steps:
+    - name: Az CLI login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        
+    - name: Set up kubelogin for non-interactive login
+      uses: azure/use-kubelogin@v1    
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: github-aks
+        cluster-name: aks-oidc-demo
+        use-kubelogin: true
+        
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      
+    - name: List namespace b pods
+      run: kubectl get pods -n namespace-b
+      
+    - name: List namespace a pods
+      run: kubectl get pods -n namespace-a
+      continue-on-error: true
